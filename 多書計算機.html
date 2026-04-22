@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f8f7f2">
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+    }
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Readmoo 多書總額計價表</title>
+    <style>
+        :root {
+            --page-bg: #e8e6df;
+            --app-bg: #f8f7f2;
+            --display-bg: #f2f1eb;
+            --key-bg: #d6c9c7; 
+            --key-text: #ffffff;
+            --gold: #b3a58e;
+            --milktea: #917c79; 
+            --text-main: #6b6a66;
+            --card-bg: #f2f1eb;
+            --shadow: rgba(0,0,0,0.1);
+        }
+
+        /* 深色模式設定區 */
+        [data-theme="dark"] {
+            --page-bg: #1a1b1d;
+            --app-bg: #212224;
+            --display-bg: #2a2c2f;
+            --key-bg: #3a3d42; 
+            --key-text: #fefefe;
+            --gold: #d4b889;
+            --milktea: #917c79;
+            --text-main: #fefefe; /* 這裡確保主文字是白的 */
+            --card-bg: #2a2c2f;
+            --shadow: rgba(0,0,0,0.4);
+        }
+
+        /* 這裡是你提到的修正位置：強制讓深色模式下的原價顯示為白色 */
+        [data-theme="dark"] .book-orig {
+            color: #ffffff !important;
+            opacity: 0.7; /* 稍微帶點透明感，與結帳價區隔，但依然是白的 */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--page-bg);
+            margin: 0; padding: 40px 20px;
+            display: flex; justify-content: center; align-items: flex-start;
+            min-height: 100vh;
+            transition: 0.3s;
+        }
+
+        .theme-switch-wrap { position: fixed; top: 20px; right: 20px; z-index: 100; }
+        .theme-btn {
+            background: var(--app-bg); border: 1px solid var(--gold);
+            color: var(--gold); border-radius: 20px;
+            padding: 6px 15px; cursor: pointer; font-size: 0.8rem;
+        }
+
+        .app-container {
+            width: 100%; max-width: 450px;
+            background-color: var(--app-bg);
+            border-radius: 40px; 
+            padding: 35px 25px;
+            box-shadow: 0 20px 50px var(--shadow);
+            border: 8px solid var(--display-bg);
+        }
+
+        .display-area {
+            background-color: var(--display-bg);
+            border-radius: 20px; padding: 25px;
+            text-align: right; margin-bottom: 20px;
+        }
+        .display-area .label { color: var(--gold); font-size: 0.9rem; text-align: left; margin-bottom: 10px; font-weight: bold;}
+        .display-area .price-symbol { color: var(--gold); font-size: 1.8rem; margin-right: 5px; font-weight: bold; }
+        .display-area .price-val { color: var(--text-main); font-size: 4rem; font-weight: 700; }
+
+        .keypad {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 12px; margin-bottom: 25px;
+        }
+        .key {
+            background-color: var(--key-bg); color: var(--key-text);
+            border: none; border-radius: 12px; height: 60px; 
+            font-size: 1.4rem; cursor: pointer; font-weight: 600;
+        }
+        .key-c { color: var(--milktea); background-color: var(--display-bg); border: 1px solid var(--key-bg); }
+        .key-calc { 
+            grid-row: span 2; height: 132px;
+            background-color: var(--milktea); color: white;
+            font-size: 1.1rem;
+        }
+
+        .summary-box {
+            background: var(--display-bg);
+            border-radius: 15px; padding: 20px; margin-top: 10px;
+        }
+        .summary-header {
+            color: var(--gold); font-size: 0.9rem; font-weight: bold;
+            margin-bottom: 15px; display: flex; justify-content: space-between;
+        }
+
+        .book-item {
+            margin-bottom: 15px; padding-bottom: 15px;
+            border-bottom: 1px dashed var(--gold);
+        }
+        .book-top-row { display: flex; justify-content: space-between; align-items: flex-start; }
+        .book-orig { font-size: 0.8rem; opacity: 0.6; text-decoration: line-through; color: var(--text-main); }
+        .book-final-price { font-weight: 800; font-size: 1.2rem; color: var(--milktea); }
+        
+        .discount-selector {
+            display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px;
+        }
+        .discount-opt {
+            font-size: 0.65rem; padding: 4px 8px; border-radius: 5px;
+            border: 1px solid var(--gold); color: var(--gold); cursor: pointer;
+            transition: 0.2s;
+        }
+        .discount-opt.active {
+            background-color: var(--gold); color: white;
+        }
+        .discount-opt.disabled {
+            opacity: 0.3; border-color: #ccc; color: #ccc; cursor: not-allowed;
+        }
+
+        .remove-btn { color: #cc7a7a; cursor: pointer; margin-left: 10px; font-weight: bold; font-size: 1.2rem;}
+
+        .total-section {
+            margin-top: 15px; padding-top: 15px;
+            border-top: 2px solid var(--gold); text-align: right;
+        }
+        .total-amount { color: var(--text-main); font-size: 2.2rem; font-weight: 800; }
+
+        .init-view { text-align: center; color: var(--gold); margin-top: 20px; padding: 20px; border: 1px dashed var(--gold); border-radius: 15px;}
+    </style>
+</head>
+<body>
+
+<div class="theme-switch-wrap">
+    <button class="theme-btn" onclick="toggleTheme()">切換模式</button>
+</div>
+
+<div class="app-container">
+    <div class="display-area">
+        <div class="label">輸入書本原價</div>
+        <div>
+            <span class="price-symbol">$</span>
+            <span id="displayVal" class="price-val">0</span>
+        </div>
+    </div>
+
+    <div class="keypad">
+        <button class="key" onclick="press('7')">7</button>
+        <button class="key" onclick="press('8')">8</button>
+        <button class="key" onclick="press('9')">9</button>
+        <button class="key" style="color: var(--gold);" onclick="back()">⌫</button>
+
+        <button class="key" onclick="press('4')">4</button>
+        <button class="key" onclick="press('5')">5</button>
+        <button class="key" onclick="press('6')">6</button>
+        <button class="key key-c" onclick="cls()">C</button>
+
+        <button class="key" onclick="press('1')">1</button>
+        <button class="key" onclick="press('2')">2</button>
+        <button class="key" onclick="press('3')">3</button>
+        <button class="key key-calc" onclick="addToCart()">加入<br>清單</button>
+
+        <button class="key" onclick="press('0')">0</button>
+        <button class="key" onclick="press('00')">00</button>
+    </div>
+
+    <div id="cartArea" class="summary-box" style="display: none;">
+        <div class="summary-header">
+            <span>折扣明細 (按推薦序排列)</span>
+            <span id="bookCount">0 本</span>
+        </div>
+        <div id="cartItems"></div>
+        <div class="total-section">
+            <span style="color: var(--gold); font-weight: bold; margin-right: 10px;">總計金額</span>
+            <span class="price-symbol" style="font-size: 1.2rem;">$</span>
+            <span id="totalAmount" class="total-amount">0</span>
+        </div>
+    </div>
+
+    <div id="initInfo" class="init-view">
+        <div style="font-size: 0.9rem;">輸入金額後「加入清單」<br>系統將自動把最划算的優惠排在前面</div>
+    </div>
+</div>
+
+<script>
+    let currentInput = "0";
+    let cart = [];
+    const COST_PER_POINT = 166.5;
+
+    function toggleTheme() {
+        const body = document.body;
+        const current = body.getAttribute('data-theme');
+        body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+    }
+
+    function press(n) {
+        if (currentInput === "0") currentInput = n;
+        else if (currentInput.length < 6) currentInput += n;
+        update();
+    }
+
+    function cls() { 
+        currentInput = "0"; cart = [];
+        update(); renderCart();
+    }
+
+    function back() { 
+        currentInput = currentInput.slice(0, -1); 
+        if (currentInput === "") currentInput = "0"; 
+        update(); 
+    }
+
+    function update() { document.getElementById('displayVal').innerText = currentInput; }
+
+    function getSortedDiscounts(p) {
+        const points = Math.ceil(p / 250);
+        const allOptions = [
+            { id: 'off50', name: "折50", final: Math.max(0, p - 50), threshold: 0 },
+            { id: '250-50', name: "250-50", final: p - 50, threshold: 250 },
+            { id: '150-30', name: "150-30", final: p - 30, threshold: 150 },
+            { id: '100-25', name: "100-25", final: p - 25, threshold: 100 },
+            { id: '70off', name: "7折", final: Math.round(p * 0.7), threshold: 0 },
+            { id: '75off', name: "3本75折", final: Math.round(p * 0.75), threshold: 0 },
+            { id: '80off', name: "8折", final: Math.round(p * 0.8), threshold: 0 },
+            { id: 'credit', name: "領書額度", final: points * COST_PER_POINT, threshold: 0, sub: `(${points}點)` },
+            { id: 'none', name: "原價", final: p, threshold: 0 }
+        ];
+
+        const optionsWithStatus = allOptions.map(opt => ({
+            ...opt,
+            isPossible: p >= opt.threshold
+        }));
+
+        return optionsWithStatus.sort((a, b) => {
+            if (a.isPossible !== b.isPossible) return b.isPossible - a.isPossible;
+            return a.final - b.final;
+        });
+    }
+
+    function addToCart() {
+        const p = parseInt(currentInput);
+        if (p <= 0) return;
+
+        const sortedOptions = getSortedDiscounts(p);
+        
+        cart.push({
+            orig: p,
+            selectedId: sortedOptions[0].id
+        });
+
+        currentInput = "0";
+        update();
+        renderCart();
+    }
+
+    function changeDiscount(bookIdx, optId, isPossible) {
+        if (!isPossible) return;
+        cart[bookIdx].selectedId = optId;
+        renderCart();
+    }
+
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        renderCart();
+    }
+
+    function renderCart() {
+        const cartArea = document.getElementById('cartArea');
+        const itemsDiv = document.getElementById('cartItems');
+        const initInfo = document.getElementById('initInfo');
+        const totalAmountSpan = document.getElementById('totalAmount');
+        const bookCountSpan = document.getElementById('bookCount');
+
+        if (cart.length === 0) {
+            cartArea.style.display = 'none';
+            initInfo.style.display = 'block';
+            return;
+        }
+
+        cartArea.style.display = 'block';
+        initInfo.style.display = 'none';
+        
+        let total = 0;
+        itemsDiv.innerHTML = cart.map((book, bIdx) => {
+            const sortedOptions = getSortedDiscounts(book.orig);
+            const selected = sortedOptions.find(opt => opt.id === book.selectedId) || sortedOptions[0];
+            total += selected.final;
+
+            return `
+                <div class="book-item">
+                    <div class="book-top-row">
+                        <div>
+                            <div class="book-orig">書本原價 $${book.orig}</div>
+                            <div class="book-final-price">$${selected.final}</div>
+                        </div>
+                        <span class="remove-btn" onclick="removeFromCart(${bIdx})">×</span>
+                    </div>
+                    <div class="discount-selector">
+                        ${sortedOptions.map((opt) => `
+                            <div class="discount-opt ${book.selectedId === opt.id ? 'active' : ''} ${!opt.isPossible ? 'disabled' : ''}" 
+                                 onclick="changeDiscount(${bIdx}, '${opt.id}', ${opt.isPossible})">
+                                ${opt.name}${opt.sub || ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        bookCountSpan.innerText = `${cart.length} 本`;
+        totalAmountSpan.innerText = Math.round(total).toLocaleString();
+    }
+</script>
+
+</body>
+</html>
