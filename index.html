@@ -3,14 +3,9 @@
 <head>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#f8f7f2">
-<script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-    }
-</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Readmoo折扣優惠計算機(多本)</title>
+    <title>Readmoo折扣計算機(多本)</title>
     <style>
         :root {
             --page-bg: #e8e6df;
@@ -25,7 +20,6 @@
             --shadow: rgba(0,0,0,0.1);
         }
 
-        /* 深色模式設定區 */
         [data-theme="dark"] {
             --page-bg: #1a1b1d;
             --app-bg: #212224;
@@ -34,15 +28,14 @@
             --key-text: #fefefe;
             --gold: #d4b889;
             --milktea: #917c79;
-            --text-main: #fefefe; /* 這裡確保主文字是白的 */
+            --text-main: #fefefe;
             --card-bg: #2a2c2f;
             --shadow: rgba(0,0,0,0.4);
         }
 
-        /* 這裡是你提到的修正位置：強制讓深色模式下的原價顯示為白色 */
         [data-theme="dark"] .book-orig {
             color: #ffffff !important;
-            opacity: 0.7; /* 稍微帶點透明感，與結帳價區隔，但依然是白的 */
+            opacity: 0.7;
         }
 
         body {
@@ -94,6 +87,7 @@
             background-color: var(--milktea); color: white;
             font-size: 1.1rem;
         }
+        .key-star { color: #ffffff; font-size: 2rem; }
 
         .summary-box {
             background: var(--display-bg);
@@ -102,6 +96,10 @@
         .summary-header {
             color: var(--gold); font-size: 0.9rem; font-weight: bold;
             margin-bottom: 15px; display: flex; justify-content: space-between;
+        }
+        .summary-notice {
+            color: var(--gold); font-size: 0.75rem; opacity: 0.8;
+            margin-bottom: 15px; margin-top: 4px; font-weight: normal;
         }
 
         .book-item {
@@ -171,13 +169,15 @@
 
         <button class="key" onclick="press('0')">0</button>
         <button class="key" onclick="press('00')">00</button>
+        <button class="key key-star" onclick="setCustomDiscount()">*</button>
     </div>
 
     <div id="cartArea" class="summary-box" style="display: none;">
         <div class="summary-header">
-            <span>折扣明細 (按推薦序排列)</span>
+            <span>折扣明細 (按推薦序排列)</br>※ 領書額度不適用於部分書籍／套書。</span>
             <span id="bookCount">0 本</span>
         </div>
+        
         <div id="cartItems"></div>
         <div class="total-section">
             <span style="color: var(--gold); font-weight: bold; margin-right: 10px;">總計金額</span>
@@ -187,13 +187,14 @@
     </div>
 
     <div id="initInfo" class="init-view">
-        <div style="font-size: 0.9rem;">輸入金額後「加入清單」<br>系統將自動把最划算的優惠排在前面</div>
+        <div style="font-size: 0.9rem;">輸入金額後「加入清單」<br>點擊「*」可設定自訂折扣</div>
     </div>
 </div>
 
 <script>
     let currentInput = "0";
     let cart = [];
+    let customDiscountRate = null;
     const COST_PER_POINT = 166.5;
 
     function toggleTheme() {
@@ -210,6 +211,7 @@
 
     function cls() { 
         currentInput = "0"; cart = [];
+        customDiscountRate = null;
         update(); renderCart();
     }
 
@@ -221,19 +223,61 @@
 
     function update() { document.getElementById('displayVal').innerText = currentInput; }
 
+    function setCustomDiscount() {
+        // 補回原本要求的詳細文字敘述
+        let val = prompt("請輸入自訂折扣 (例如: 9 代表 9折，65 代表 65折)\n\n輸入 0 或取消則移除自訂折扣。\n\n自訂折扣將套至清單內所有書籍，數字可隨時更改，但無法單一套用。", customDiscountRate ? (customDiscountRate < 1 && (customDiscountRate*100)%10 === 0 ? customDiscountRate * 10 : customDiscountRate * 100) : "");
+        
+        if (val === null || val === "" || parseFloat(val) === 0) {
+            customDiscountRate = null;
+            alert("已移除自訂折扣");
+        } else {
+            let num = parseFloat(val);
+            // 維持修正後的正確判斷邏輯
+            if (num >= 10) {
+                num = num / 100;
+            } else if (num >= 1 && num < 10) {
+                num = num / 10;
+            alert(`已設定自訂折扣`);
+            }
+            customDiscountRate = num;
+        }
+        renderCart(); 
+    }
+
     function getSortedDiscounts(p) {
         const points = Math.ceil(p / 250);
-        const allOptions = [
+        let allOptions = [
             { id: 'off50', name: "折50", final: Math.max(0, p - 50), threshold: 0 },
             { id: '250-50', name: "250-50", final: p - 50, threshold: 250 },
             { id: '150-30', name: "150-30", final: p - 30, threshold: 150 },
             { id: '100-25', name: "100-25", final: p - 25, threshold: 100 },
-            { id: '70off', name: "7折", final: Math.round(p * 0.7), threshold: 0 },
-            { id: '75off', name: "3本75折", final: Math.round(p * 0.75), threshold: 0 },
-            { id: '80off', name: "8折", final: Math.round(p * 0.8), threshold: 0 },
-            { id: 'credit', name: "領書額度", final: points * COST_PER_POINT, threshold: 0, sub: `(${points}點)` },
+            { id: '70off', name: "7折", final: p * 0.7, threshold: 0 },
+            { id: '75off', name: "3本75折", final: p * 0.75, threshold: 0 },
+            { id: '80off', name: "8折", final: p * 0.8, threshold: 0 },
             { id: 'none', name: "原價", final: p, threshold: 0 }
         ];
+
+        if (points <= 4) {
+            allOptions.push({ 
+                id: 'credit', 
+                name: "領書額度", 
+                final: points * COST_PER_POINT, 
+                threshold: 0, 
+                sub: `(${points}點)` 
+            });
+        }
+
+        if (customDiscountRate !== null) {
+            let displayLabel = customDiscountRate * 100;
+            if (displayLabel % 10 === 0) displayLabel = displayLabel / 10;
+            
+            allOptions.push({
+                id: 'custom',
+                name: `${displayLabel}折(自訂)`,
+                final: p * customDiscountRate,
+                threshold: 0
+            });
+        }
 
         const optionsWithStatus = allOptions.map(opt => ({
             ...opt,
@@ -249,14 +293,11 @@
     function addToCart() {
         const p = parseInt(currentInput);
         if (p <= 0) return;
-
         const sortedOptions = getSortedDiscounts(p);
-        
         cart.push({
             orig: p,
             selectedId: sortedOptions[0].id
         });
-
         currentInput = "0";
         update();
         renderCart();
@@ -292,21 +333,28 @@
         let total = 0;
         itemsDiv.innerHTML = cart.map((book, bIdx) => {
             const sortedOptions = getSortedDiscounts(book.orig);
-            const selected = sortedOptions.find(opt => opt.id === book.selectedId) || sortedOptions[0];
-            total += selected.final;
+            let selected = sortedOptions.find(opt => opt.id === book.selectedId);
+            
+            if (!selected || (customDiscountRate !== null && sortedOptions[0].id === 'custom' && book.selectedId !== 'custom')) {
+                selected = sortedOptions[0];
+                cart[bIdx].selectedId = selected.id;
+            }
+            
+            const finalRounded = Math.round(selected.final);
+            total += finalRounded;
 
             return `
                 <div class="book-item">
                     <div class="book-top-row">
                         <div>
                             <div class="book-orig">書本原價 $${book.orig}</div>
-                            <div class="book-final-price">$${selected.final}</div>
+                            <div class="book-final-price">$${finalRounded}</div>
                         </div>
                         <span class="remove-btn" onclick="removeFromCart(${bIdx})">×</span>
                     </div>
                     <div class="discount-selector">
                         ${sortedOptions.map((opt) => `
-                            <div class="discount-opt ${book.selectedId === opt.id ? 'active' : ''} ${!opt.isPossible ? 'disabled' : ''}" 
+                            <div class="discount-opt ${cart[bIdx].selectedId === opt.id ? 'active' : ''} ${!opt.isPossible ? 'disabled' : ''}" 
                                  onclick="changeDiscount(${bIdx}, '${opt.id}', ${opt.isPossible})">
                                 ${opt.name}${opt.sub || ''}
                             </div>
@@ -317,7 +365,7 @@
         }).join('');
 
         bookCountSpan.innerText = `${cart.length} 本`;
-        totalAmountSpan.innerText = Math.round(total).toLocaleString();
+        totalAmountSpan.innerText = total.toLocaleString();
     }
 </script>
 
