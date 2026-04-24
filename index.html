@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#f8f7f2">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Readmoo折扣計算機(多本) 2.1.1</title>
+    <title>Readmoo折扣計算機(多本) 2.1.2</title>
     <style>
         :root {
             --page-bg: #e8e6df;
@@ -57,17 +57,6 @@
             padding: 6px 15px; cursor: pointer; font-size: 0.8rem;
         }
 
-        .app-container {
-            width: 100%; max-width: 450px;
-            background-color: var(--app-bg);
-            border-radius: 40px; 
-            padding: 35px 25px;
-            box-shadow: 0 20px 50px var(--shadow);
-            border: 8px solid var(--display-bg);
-            box-sizing: border-box;
-        }
-
-	/* 計算機主體容器 */
         .app-container {
             width: 100%; max-width: 450px;
             background-color: var(--app-bg);
@@ -163,7 +152,7 @@
 
         .init-view { text-align: center; color: var(--gold); margin-top: 20px; padding: 20px; border: 1px dashed var(--gold); border-radius: 15px;}
 
-	/* 推廣文字與按鈕 */
+        /* 推廣文字與按鈕 */
         .promo-text {
             color: var(--text-main);
             font-size: 0.85rem;
@@ -229,7 +218,7 @@
             <span>折扣明細 (按推薦序排列)</span>
             <span id="bookCount">0 本</span>
         </div>
-	<div class="summary-notice">-領書額度不適用於部分書籍／套書。</br>-目前領書點數上限訂為10點。</div>
+        <div class="summary-notice">-領書額度不適用於部分書籍／套書。</br>-目前領書點數上限訂為10點。</div>
         
         <div id="cartItems"></div>
         <div class="total-section">
@@ -282,7 +271,6 @@
     function update() { document.getElementById('displayVal').innerText = currentInput; }
 
     function setCustomDiscount() {
-        // 補回原本要求的詳細文字敘述
         let val = prompt("請輸入自訂折扣 (例如: 9 代表 9折，65 代表 65折)\n\n輸入 0 或取消則移除自訂折扣。\n\n自訂折扣將套至清單內所有書籍，數字可隨時更改，但無法單一套用。", customDiscountRate ? (customDiscountRate < 1 && (customDiscountRate*100)%10 === 0 ? customDiscountRate * 10 : customDiscountRate * 100) : "");
         
         if (val === null || val === "" || parseFloat(val) === 0) {
@@ -290,14 +278,13 @@
             alert("已移除自訂折扣");
         } else {
             let num = parseFloat(val);
-            // 維持修正後的正確判斷邏輯
             if (num >= 10) {
                 num = num / 100;
             } else if (num >= 1 && num < 10) {
                 num = num / 10;
-            alert(`已設定自訂折扣`);
             }
             customDiscountRate = num;
+            alert(`已設定自訂折扣`);
         }
         renderCart(); 
     }
@@ -372,6 +359,16 @@
         renderCart();
     }
 
+    // 自訂進位邏輯：0.6 以上進位，0.5 以下捨去
+    function customRound(num) {
+        const decimal = num - Math.floor(num);
+        if (decimal >= 0.6) {
+            return Math.ceil(num);
+        } else {
+            return Math.floor(num);
+        }
+    }
+
     function renderCart() {
         const cartArea = document.getElementById('cartArea');
         const itemsDiv = document.getElementById('cartItems');
@@ -398,7 +395,8 @@
                 cart[bIdx].selectedId = selected.id;
             }
             
-            const finalRounded = Math.floor(selected.final);
+            // 套用自訂進位邏輯
+            const finalRounded = customRound(selected.final);
             total += finalRounded;
 
             return `
