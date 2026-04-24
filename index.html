@@ -398,7 +398,7 @@
                 cart[bIdx].selectedId = selected.id;
             }
             
-            const finalRounded = Math.round(selected.final);
+            const finalRounded = Math.floor(selected.final);
             total += finalRounded;
 
             return `
