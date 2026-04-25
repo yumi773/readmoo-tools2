@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#f8f7f2">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Readmoo折扣計算機(多本) 2.1.2</title>
+    <title>Readmoo折扣計算機(多本) 2.2</title>
     <style>
         :root {
             --page-bg: #e8e6df;
@@ -43,7 +43,7 @@
             background-color: var(--page-bg);
             margin: 0; padding: 40px 20px;
             display: flex; 
-            flex-direction: column; /* 讓多個 div 垂直排列 */
+            flex-direction: column;
             align-items: center; 
             justify-content: flex-start;
             min-height: 100vh;
@@ -67,10 +67,9 @@
             box-sizing: border-box;
         }
 
-        /* 獨立推廣區塊容器 */
         .promo-container {
             width: 100%; max-width: 450px;
-            margin-top: 20px; /* 與上方計算機的間距 */
+            margin-top: 20px;
             background-color: var(--app-bg);
             border-radius: 20px;
             padding: 20px;
@@ -97,7 +96,9 @@
             background-color: var(--key-bg); color: var(--key-text);
             border: none; border-radius: 12px; height: 60px; 
             font-size: 1.4rem; cursor: pointer; font-weight: 600;
+            transition: opacity 0.1s;
         }
+        .key:active { opacity: 0.7; }
         .key-c { color: var(--milktea); background-color: var(--display-bg); border: 1px solid var(--key-bg); }
         .key-calc { 
             grid-row: span 2; height: 132px;
@@ -152,7 +153,6 @@
 
         .init-view { text-align: center; color: var(--gold); margin-top: 20px; padding: 20px; border: 1px dashed var(--gold); border-radius: 15px;}
 
-        /* 推廣文字與按鈕 */
         .promo-text {
             color: var(--text-main);
             font-size: 0.85rem;
@@ -170,10 +170,6 @@
             font-weight: bold;
             transition: 0.3s;
             box-shadow: 0 4px 10px var(--shadow);
-        }
-        .promo-btn:hover {
-            transform: translateY(-2px);
-            opacity: 0.9;
         }
     </style>
 </head>
@@ -206,7 +202,7 @@
         <button class="key" onclick="press('1')">1</button>
         <button class="key" onclick="press('2')">2</button>
         <button class="key" onclick="press('3')">3</button>
-        <button class="key key-calc" onclick="addToCart()">加入<br>清單</button>
+        <button class="key key-calc" id="btnAdd" onclick="addToCart()">加入<br>清單</button>
 
         <button class="key" onclick="press('0')">0</button>
         <button class="key" onclick="press('00')">00</button>
@@ -242,7 +238,34 @@
     let currentInput = "0";
     let cart = [];
     let customDiscountRate = null;
+    let isPrompting = false; // 避免 prompt 開啟時觸發監聽
     const COST_PER_POINT = 166.5;
+
+    // --- 實體鍵盤支援區 ---
+    window.addEventListener('keydown', function(e) {
+        if (isPrompting) return; // 對話框開啟中不執行
+
+        // 數字鍵 0-9
+        if (e.key >= '0' && e.key <= '9') {
+            press(e.key);
+        }
+        // Backspace 退格
+        else if (e.key === 'Backspace') {
+            back();
+        }
+        // Enter 加入清單
+        else if (e.key === 'Enter') {
+            addToCart();
+        }
+        // Escape 或 Delete 清空 (C)
+        else if (e.key === 'Escape' || e.key === 'Delete') {
+            cls();
+        }
+        // 星號 * 自訂折扣
+        else if (e.key === '*') {
+            setCustomDiscount();
+        }
+    });
 
     function toggleTheme() {
         const body = document.body;
@@ -271,21 +294,18 @@
     function update() { document.getElementById('displayVal').innerText = currentInput; }
 
     function setCustomDiscount() {
+        isPrompting = true;
         let val = prompt("請輸入自訂折扣 (例如: 9 代表 9折，65 代表 65折)\n\n輸入 0 或取消則移除自訂折扣。\n\n自訂折扣將套至清單內所有書籍，數字可隨時更改，但無法單一套用。", customDiscountRate ? (customDiscountRate < 1 && (customDiscountRate*100)%10 === 0 ? customDiscountRate * 10 : customDiscountRate * 100) : "");
         
         if (val === null || val === "" || parseFloat(val) === 0) {
             customDiscountRate = null;
-            alert("已移除自訂折扣");
         } else {
             let num = parseFloat(val);
-            if (num >= 10) {
-                num = num / 100;
-            } else if (num >= 1 && num < 10) {
-                num = num / 10;
-            }
+            if (num >= 10) num = num / 100;
+            else if (num >= 1 && num < 10) num = num / 10;
             customDiscountRate = num;
-            alert(`已設定自訂折扣`);
         }
+        isPrompting = false;
         renderCart(); 
     }
 
@@ -359,14 +379,9 @@
         renderCart();
     }
 
-    // 自訂進位邏輯：0.6 以上進位，0.5 以下捨去
     function customRound(num) {
         const decimal = num - Math.floor(num);
-        if (decimal >= 0.6) {
-            return Math.ceil(num);
-        } else {
-            return Math.floor(num);
-        }
+        return decimal >= 0.6 ? Math.ceil(num) : Math.floor(num);
     }
 
     function renderCart() {
@@ -395,7 +410,6 @@
                 cart[bIdx].selectedId = selected.id;
             }
             
-            // 套用自訂進位邏輯
             const finalRounded = customRound(selected.final);
             total += finalRounded;
 
