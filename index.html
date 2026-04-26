@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#f8f7f2">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Readmoo折扣計算機(多本) 2.2</title>
+    <title>Readmoo折扣計算機(多本) 2.2.1</title>
     <style>
         :root {
             --page-bg: #e8e6df;
@@ -150,6 +150,14 @@
             border-top: 2px solid var(--gold); text-align: right;
         }
         .total-amount { color: var(--text-main); font-size: 2.2rem; font-weight: 800; }
+        
+        /* 新增：次要資訊字體大小與折扣按鈕一致 */
+        .total-sub-info {
+            font-size: 0.8rem;
+            color: var(--gold);
+            margin-top: 4px;
+            opacity: 0.9;
+        }
 
         .init-view { text-align: center; color: var(--gold); margin-top: 20px; padding: 20px; border: 1px dashed var(--gold); border-radius: 15px;}
 
@@ -218,9 +226,14 @@
         
         <div id="cartItems"></div>
         <div class="total-section">
-            <span style="color: var(--gold); font-weight: bold; margin-right: 10px;">總計金額</span>
-            <span style="color: var(--gold); font-weight: bold;">$</span>
-            <span id="totalAmount" class="total-amount">0</span>
+            <div>
+                <span style="color: var(--gold); font-weight: bold; margin-right: 10px;">總計金額</span>
+                <span style="color: var(--gold); font-weight: bold;">$</span>
+                <span id="totalAmount" class="total-amount">0</span>
+            </div>
+            <div class="total-sub-info">
+                合計原價：$<span id="totalOriginal">0</span> | 共省下：$<span id="totalSaved">0</span>
+            </div>
         </div>
     </div>
 
@@ -238,33 +251,16 @@
     let currentInput = "0";
     let cart = [];
     let customDiscountRate = null;
-    let isPrompting = false; // 避免 prompt 開啟時觸發監聽
+    let isPrompting = false;
     const COST_PER_POINT = 166.5;
 
-    // --- 實體鍵盤支援區 ---
     window.addEventListener('keydown', function(e) {
-        if (isPrompting) return; // 對話框開啟中不執行
-
-        // 數字鍵 0-9
-        if (e.key >= '0' && e.key <= '9') {
-            press(e.key);
-        }
-        // Backspace 退格
-        else if (e.key === 'Backspace') {
-            back();
-        }
-        // Enter 加入清單
-        else if (e.key === 'Enter') {
-            addToCart();
-        }
-        // Escape 或 Delete 清空 (C)
-        else if (e.key === 'Escape' || e.key === 'Delete') {
-            cls();
-        }
-        // 星號 * 自訂折扣
-        else if (e.key === '*') {
-            setCustomDiscount();
-        }
+        if (isPrompting) return;
+        if (e.key >= '0' && e.key <= '9') press(e.key);
+        else if (e.key === 'Backspace') back();
+        else if (e.key === 'Enter') addToCart();
+        else if (e.key === 'Escape' || e.key === 'Delete') cls();
+        else if (e.key === '*') setCustomDiscount();
     });
 
     function toggleTheme() {
@@ -389,6 +385,8 @@
         const itemsDiv = document.getElementById('cartItems');
         const initInfo = document.getElementById('initInfo');
         const totalAmountSpan = document.getElementById('totalAmount');
+        const totalOriginalSpan = document.getElementById('totalOriginal');
+        const totalSavedSpan = document.getElementById('totalSaved');
         const bookCountSpan = document.getElementById('bookCount');
 
         if (cart.length === 0) {
@@ -400,7 +398,9 @@
         cartArea.style.display = 'block';
         initInfo.style.display = 'none';
         
-        let total = 0;
+        let totalFinal = 0;
+        let totalOriginal = 0;
+
         itemsDiv.innerHTML = cart.map((book, bIdx) => {
             const sortedOptions = getSortedDiscounts(book.orig);
             let selected = sortedOptions.find(opt => opt.id === book.selectedId);
@@ -411,7 +411,8 @@
             }
             
             const finalRounded = customRound(selected.final);
-            total += finalRounded;
+            totalFinal += finalRounded;
+            totalOriginal += book.orig;
 
             return `
                 <div class="book-item">
@@ -435,7 +436,9 @@
         }).join('');
 
         bookCountSpan.innerText = `${cart.length} 本`;
-        totalAmountSpan.innerText = total.toLocaleString();
+        totalAmountSpan.innerText = totalFinal.toLocaleString();
+        totalOriginalSpan.innerText = totalOriginal.toLocaleString();
+        totalSavedSpan.innerText = (totalOriginal - totalFinal).toLocaleString();
     }
 </script>
 
