@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#f8f7f2">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Readmoo折扣計算機(多本) 2.3.3</title>
+    <title>Readmoo折扣計算機(多本) 2.3.4</title>
     <style>
         :root {
             --page-bg: #e8e6df;
@@ -372,22 +372,27 @@
 
     function setCustomDiscount() {
         isPrompting = true;
-        let val = prompt("請輸入自訂折扣 (例如: 9 代表 9折，65 代表 65折)\n\n規定：只能輸入 99 以內的數字。\n輸入 0 或取消則移除自訂折扣。\n\n自訂折扣將套至清單內所有書籍，數字可隨時更改，但無法單一套用。", customDiscountRate ? (customDiscountRate < 1 && (customDiscountRate*100)%10 === 0 ? customDiscountRate * 10 : customDiscountRate * 100) : "");
+        let val = prompt("請輸入自訂折扣 (例如: 9 代表 9折，65 代表 65折)\n\n規定：只能輸入 99 以內的數字。\n輸入 0 或取消則移除自訂折扣。\n\n自訂折扣將套至清單內所有書籍，數字可隨時更改，但無法單一套用。\n\n取消自訂後，若有套用「自訂折扣」的書，則該書將會跳回預設選項。\n若不想跳掉已選好的配置，請在取消前先檢查。", customDiscountRate ? (customDiscountRate < 1 && (customDiscountRate*100)%10 === 0 ? customDiscountRate * 10 : customDiscountRate * 100) : "");
         
         if (val === null || val === "" || parseFloat(val) === 0) {
+            // --- 修正處：取消自訂折扣時的邏輯 ---
             customDiscountRate = null;
             document.getElementById('optCustom').style.display = 'none';
-            // 當取消自訂折扣時，強制回到「推薦方案」
-            currentGlobalType = 'auto';
             alert("已移除自訂折扣");
-            // 重新計算所有書本的折扣為推薦方案 
+
+            // 遍歷所有書本，如果該書原本是選「自訂折扣」，才幫它跳回推薦（最便宜）選項
+            // 其他原本手動選好的 (如 7折、折50) 則維持不動
             cart.forEach((book, idx) => {
-                const sorted = getSortedDiscounts(book.orig);
-                cart[idx].selectedId = sorted[0].id;
+                if (book.selectedId === 'custom') {
+                    const sorted = getSortedDiscounts(book.orig);
+                    cart[idx].selectedId = sorted[0].id;
+                }
             });
+            
+            // 設為 mixed 模式，避免觸發全域 auto 的重新計算
+            currentGlobalType = 'mixed'; 
         } else {
             let num = parseFloat(val);
-            // 新增：限制只能輸入 99 以內的數字
             if (num > 99) {
                 alert("錯誤：只能輸入 99 以內的數字，請重新輸入。");
                 isPrompting = false;
@@ -398,6 +403,7 @@
             else if (num >= 1 && num < 10) num = num / 10;
             customDiscountRate = num;
             document.getElementById('optCustom').style.display = 'block';
+            // 設定完新折扣後，維持現狀不變，讓使用者手動去選或用一鍵套用
         }
         isPrompting = false;
         renderCart(); 
