@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#f8f7f2">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Readmoo折扣計算機(多本) 2.3.1</title>
+    <title>Readmoo折扣計算機(多本) 2.3.2</title>
     <style>
         :root {
             --page-bg: #e8e6df;
@@ -41,7 +41,7 @@
         body {
             font-family: -apple-system, "Noto Sans CJK TC", sans-serif;
             background-color: var(--page-bg);
-            margin: 0; padding: 40px 20px;
+            margin: 0; padding: 20px 10px;
             display: flex; 
             flex-direction: column;
             align-items: center; 
@@ -50,7 +50,7 @@
             transition: 0.3s;
         }
 
-        .theme-switch-wrap { position: fixed; top: 20px; right: 20px; z-index: 100; }
+        .theme-switch-wrap { position: fixed; top: 15px; right: 15px; z-index: 100; }
         .theme-btn {
             background: var(--app-bg); border: 1px solid var(--gold);
             color: var(--gold); border-radius: 20px;
@@ -58,10 +58,11 @@
         }
 
         .app-container {
-            width: 100%; max-width: 450px;
+            width: 100%; 
+            max-width: 450px;
             background-color: var(--app-bg);
             border-radius: 40px; 
-            padding: 35px 25px;
+            padding: 25px 20px;
             box-shadow: 0 20px 50px var(--shadow);
             border: 8px solid var(--display-bg);
             box-sizing: border-box;
@@ -74,22 +75,22 @@
         }
         .display-area .label { color: var(--gold); font-size: 0.9rem; text-align: left; margin-bottom: 10px; font-weight: bold;}
         .display-area .price-symbol { color: var(--gold); font-size: 1.8rem; margin-right: 5px; font-weight: bold; }
-        .display-area .price-val { color: var(--text-main); font-size: 4rem; font-weight: 700; }
+        .display-area .price-val { color: var(--text-main); font-size: 3.5rem; font-weight: 700; }
 
         .keypad {
             display: grid; grid-template-columns: repeat(4, 1fr);
-            gap: 12px; margin-bottom: 25px;
+            gap: 10px; margin-bottom: 25px;
         }
         .key {
             background-color: var(--key-bg); color: var(--key-text);
-            border: none; border-radius: 12px; height: 60px; 
-            font-size: 1.4rem; cursor: pointer; font-weight: 600;
+            border: none; border-radius: 12px; height: 55px; 
+            font-size: 1.3rem; cursor: pointer; font-weight: 600;
             transition: opacity 0.1s;
         }
         .key:active { opacity: 0.7; }
         .key-c { color: var(--milktea); background-color: var(--display-bg); border: 1px solid var(--key-bg); }
         .key-calc { 
-            grid-row: span 2; height: 132px;
+            grid-row: span 2; height: 120px;
             background-color: var(--milktea); color: white;
             font-size: 1.1rem;
         }
@@ -97,14 +98,14 @@
 
         .summary-box {
             background: var(--display-bg);
-            border-radius: 15px; padding: 20px; margin-top: 10px;
+            border-radius: 15px; padding: 15px; margin-top: 10px;
         }
         .summary-header {
             color: var(--gold); font-size: 0.9rem; font-weight: bold;
             margin-bottom: 15px; display: flex; justify-content: space-between;
         }
         .summary-notice {
-            color: var(--gold); font-size: 0.85rem;
+            color: var(--gold); font-size: 0.8rem;
             margin-bottom: 15px; font-weight: 550;
         }
 
@@ -113,14 +114,14 @@
             border-bottom: 1px dashed var(--gold);
         }
         .book-top-row { display: flex; justify-content: space-between; align-items: flex-start; }
-        .book-orig { font-size: 0.8rem; opacity: 0.6; text-decoration: line-through; color: var(--text-main); }
+        .book-orig { font-size: 0.75rem; opacity: 0.6; text-decoration: line-through; color: var(--text-main); }
         .book-final-price { font-weight: 800; font-size: 1.2rem; color: var(--milktea); }
         
         .discount-selector {
             display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px;
         }
         .discount-opt {
-            font-size: 0.65rem; padding: 4px 8px; border-radius: 5px;
+            font-size: 0.6rem; padding: 4px 6px; border-radius: 5px;
             border: 1px solid var(--gold); color: var(--gold); cursor: pointer;
             transition: 0.2s;
         }
@@ -137,31 +138,37 @@
             margin-top: 15px; padding-top: 15px;
             border-top: 2px solid var(--gold);
         }
-        .total-row {
-            display: flex; justify-content: space-between; align-items: flex-end;
-        }
-        .total-amount-wrap { text-align: right; }
-        .total-amount { color: var(--text-main); font-size: 2.2rem; font-weight: 800; }
         
-        .total-sub-info {
-            font-size: 0.65rem;
-            color: var(--gold);
-            margin-top: 4px;
-            opacity: 0.9;
+        .total-layout {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .total-left {
+            flex: 1;
+        }
+        .total-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
             text-align: right;
         }
-
-        .batch-apply-wrap {
-            display: flex; flex-direction: column; align-items: flex-start;
-        }
+        
         .batch-status {
             font-size: 0.65rem;
             color: var(--milktea);
-            margin-bottom: 4px;
             font-weight: bold;
+            margin-top: 2px;
+        }
+        
+        .batch-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 8px;
         }
         .batch-label {
-            font-size: 0.65rem; color: var(--gold); margin-bottom: 4px; font-weight: bold;
+            font-size: 0.65rem; color: var(--gold); font-weight: bold;
         }
         .batch-select {
             background: var(--app-bg);
@@ -169,9 +176,22 @@
             color: var(--text-main);
             border-radius: 8px;
             font-size: 0.75rem;
-            padding: 4px;
+            padding: 2px 4px;
             outline: none;
             cursor: pointer;
+        }
+
+        .total-amount-wrap { 
+            margin-bottom: 4px;
+        }
+        .total-label { color: var(--gold); font-weight: bold; margin-right: 5px; font-size: 0.85rem; }
+        .total-symbol { color: var(--gold); font-weight: bold; font-size: 1.2rem; }
+        .total-amount { color: var(--text-main); font-size: 1.8rem; font-weight: 800; }
+        
+        .total-sub-info {
+            font-size: 0.6rem;
+            color: var(--gold);
+            opacity: 0.9;
         }
 
         .init-view { text-align: center; color: var(--gold); margin-top: 20px; padding: 20px; border: 1px dashed var(--gold); border-radius: 15px;}
@@ -237,29 +257,34 @@
         <div id="cartItems"></div>
         
         <div class="total-section">
-            <div class="total-row">
-                <div class="batch-apply-wrap">
+            <div class="total-layout">
+                <div class="total-left">
                     <div id="batchStatus" class="batch-status">當前方案：推薦方案</div>
-                    <span class="batch-label">一鍵套用</span>
-                    <select id="batchSelect" class="batch-select" onchange="batchApplyDiscount(this.value)">
-                        <option value="">請選擇...</option>
-                        <option value="auto">推薦方案</option>
-                        <option value="70off">7折</option>
-                        <option value="75off">75折</option>
-                        <option value="80off">8折</option>
-                        <option id="optCustom" value="custom" style="display:none;">自訂折扣</option>
-                    </select>
                 </div>
+                
+                <div class="total-right">
+                    <div class="batch-control">
+                        <span class="batch-label">一鍵套用</span>
+                        <select id="batchSelect" class="batch-select" onchange="batchApplyDiscount(this.value)">
+                            <option value="">請選擇...</option>
+                            <option value="auto">推薦方案</option>
+                            <option value="70off">7折</option>
+                            <option value="75off">75折</option>
+                            <option value="80off">8折</option>
+                            <option id="optCustom" value="custom" style="display:none;">自訂折扣</option>
+                        </select>
+                    </div>
 
-                <div class="total-amount-wrap">
-                    <span style="color: var(--gold); font-weight: bold; margin-right: 10px;">總計金額</span>
-                    <span style="color: var(--gold); font-weight: bold;">$</span>
-                    <span id="totalAmount" class="total-amount">0</span>
+                    <div class="total-amount-wrap">
+                        <span class="total-label">總計金額</span>
+                        <span class="total-symbol">$</span>
+                        <span id="totalAmount" class="total-amount">0</span>
+                    </div>
+                    
+                    <div class="total-sub-info">
+                        合計原價：$<span id="totalOriginal">0</span> | 共省下：$<span id="totalSaved">0</span>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="total-sub-info">
-                合計原價：$<span id="totalOriginal">0</span> | 共省下：$<span id="totalSaved">0</span>
             </div>
         </div>
     </div>
@@ -325,8 +350,14 @@
         if (val === null || val === "" || parseFloat(val) === 0) {
             customDiscountRate = null;
             document.getElementById('optCustom').style.display = 'none';
-            if (currentGlobalType === 'custom') currentGlobalType = 'mixed';
             alert("已移除自訂折扣");
+            // 當取消自訂折扣時，強制回到「推薦方案」
+            currentGlobalType = 'auto'; 
+            // 重新計算所有書本的折扣為推薦方案
+            cart.forEach((book, idx) => {
+                const sorted = getSortedDiscounts(book.orig);
+                cart[idx].selectedId = sorted[0].id;
+            });
         } else {
             let num = parseFloat(val);
             if (num >= 10) num = num / 100;
