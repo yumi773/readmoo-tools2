@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#f8f7f2">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Readmoo折扣計算機(多本) 2.3.4</title>
+    <title>Readmoo折扣計算機(多本) 2.3.5</title>
     <style>
         :root {
             --page-bg: #e8e6df;
@@ -70,6 +70,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            text-decoration: none;
         }
 
         .app-container {
@@ -87,7 +88,39 @@
             border-radius: 20px; padding: 25px;
             text-align: right; margin-bottom: 20px;
         }
-        .display-area .label { color: var(--gold); font-size: 0.9rem; text-align: left; margin-bottom: 10px; font-weight: bold;}
+
+        /* 標題列佈局調整 */
+        .display-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .display-area .label { color: var(--gold); font-size: 0.9rem; font-weight: bold;}
+        
+        /* 切換按鈕樣式 */
+        .switch-links {
+            display: flex;
+            gap: 8px;
+        }
+        .link-btn {
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 15px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.2s;
+            border: 1px solid var(--milktea);
+        }
+        .link-single {
+            background-color: #ffffff;
+            color: var(--milktea);
+        }
+        .link-multi {
+            background-color: var(--milktea);
+            color: #ffffff;
+        }
+
         .display-area .price-symbol { color: var(--gold); font-size: 1.8rem; margin-right: 5px; font-weight: bold; }
         .display-area .price-val { color: var(--text-main); font-size: 4rem; font-weight: 700; }
 
@@ -238,7 +271,13 @@
 
 <div class="app-container">
     <div class="display-area">
-        <div class="label">輸入書本原價</div>
+        <div class="display-header">
+            <div class="label">輸入書本原價</div>
+            <div class="switch-links">
+                <a href="https://yumi773.github.io/readmoo-tools1/" class="link-btn link-single">單本</a>
+                <a href="https://yumi773.github.io/readmoo-tools2/" class="link-btn link-multi">多本</a>
+            </div>
+        </div>
         <div>
             <span class="price-symbol">$</span>
             <span id="displayVal" class="price-val">0</span>
@@ -372,7 +411,7 @@
 
     function setCustomDiscount() {
         isPrompting = true;
-        let val = prompt("請輸入自訂折扣 (例如: 9 代表 9折，65 代表 65折)\n\n規定：只能輸入 99 以內的數字。\n輸入 0 或取消則移除自訂折扣。\n\n自訂折扣將套至清單內所有書籍，數字可隨時更改，但無法單一套用。\n\n取消自訂後，若有套用「自訂折扣」的書，則該書將會跳回預設選項。\n若不想跳掉已選好的配置，請在取消前先檢查。", customDiscountRate ? (customDiscountRate < 1 && (customDiscountRate*100)%10 === 0 ? customDiscountRate * 10 : customDiscountRate * 100) : "");
+        let val = prompt("請輸入自訂折扣 (例如: 9 代表 9折，65 代表 65折)\n\n規定：只能輸入 99 以內的數字。\n輸入 0 或取消則移除自訂折扣。\n\n自訂折扣將套至清單內所有書籍，數字可隨時更改；但取消後，若當中有套用「自訂」的書，則該書會跳回預設選項。\n若不想跳掉已選好的配置，請在取消前先檢查。", customDiscountRate ? (customDiscountRate < 1 && (customDiscountRate*100)%10 === 0 ? customDiscountRate * 10 : customDiscountRate * 100) : "");
         
         if (val === null || val === "" || parseFloat(val) === 0) {
             // --- 修正處：取消自訂折扣時的邏輯 ---
