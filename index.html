@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#f8f7f2">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Readmoo折扣計算機(多本) 2.3.2</title>
+    <title>Readmoo折扣計算機(多本) 2.3.3</title>
     <style>
         :root {
             --page-bg: #e8e6df;
@@ -51,10 +51,25 @@
         }
 
         .theme-switch-wrap { position: fixed; top: 20px; right: 20px; z-index: 100; }
+        
+        .nav-buttons-wrap { 
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px; 
+            z-index: 100; 
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
         .theme-btn {
             background: var(--app-bg); border: 1px solid var(--gold);
             color: var(--gold); border-radius: 20px;
             padding: 6px 15px; cursor: pointer; font-size: 0.8rem;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .app-container {
@@ -210,10 +225,15 @@
         .promo-btn { display: inline-block; background-color: var(--milktea); color: #fff; text-decoration: none; padding: 8px 25px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 10px var(--shadow); }
     </style>
 </head>
-<body>
+<body id="top">
 
 <div class="theme-switch-wrap">
     <button class="theme-btn" onclick="toggleTheme()">◐</button>
+</div>
+
+<div class="nav-buttons-wrap">
+    <button class="theme-btn" onclick="scrollToTop()">▲</button>
+    <button class="theme-btn" onclick="scrollToBottom()">▼</button>
 </div>
 
 <div class="app-container">
@@ -293,7 +313,7 @@
     </div>
 </div>
 
-<div class="promo-container">
+<div class="promo-container" id="bottom">
     <div class="promo-text">喜歡這個計算機的話，<br>歡迎用 AP 連結小小鼓勵我喔❤</div>
     <a href="https://moo.im/a/clmtBW" target="_blank" class="promo-btn">AP 連結</a>
 </div>
@@ -321,6 +341,14 @@
         body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
     }
 
+    function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function scrollToBottom() {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+
     function press(n) {
         if (currentInput === "0") currentInput = n;
         else if (currentInput.length < 6) currentInput += n;
@@ -344,26 +372,32 @@
 
     function setCustomDiscount() {
         isPrompting = true;
-        let val = prompt("請輸入自訂折扣 (例如: 9 代表 9折，65 代表 65折)\n\n輸入 0 或取消則移除自訂折扣。\n\n自訂折扣將套至清單內所有書籍，數字可隨時更改，但無法單一套用。", customDiscountRate ? (customDiscountRate < 1 && (customDiscountRate*100)%10 === 0 ? customDiscountRate * 10 : customDiscountRate * 100) : "");
+        let val = prompt("請輸入自訂折扣 (例如: 9 代表 9折，65 代表 65折)\n\n規定：只能輸入 99 以內的數字。\n輸入 0 或取消則移除自訂折扣。\n\n自訂折扣將套至清單內所有書籍，數字可隨時更改，但無法單一套用。", customDiscountRate ? (customDiscountRate < 1 && (customDiscountRate*100)%10 === 0 ? customDiscountRate * 10 : customDiscountRate * 100) : "");
         
         if (val === null || val === "" || parseFloat(val) === 0) {
             customDiscountRate = null;
             document.getElementById('optCustom').style.display = 'none';
             // 當取消自訂折扣時，強制回到「推薦方案」
-            currentGlobalType = 'auto'; 
+            currentGlobalType = 'auto';
             alert("已移除自訂折扣");
-            // 重新計算所有書本的折扣為推薦方案
+            // 重新計算所有書本的折扣為推薦方案 
             cart.forEach((book, idx) => {
                 const sorted = getSortedDiscounts(book.orig);
                 cart[idx].selectedId = sorted[0].id;
             });
         } else {
             let num = parseFloat(val);
+            // 新增：限制只能輸入 99 以內的數字
+            if (num > 99) {
+                alert("錯誤：只能輸入 99 以內的數字，請重新輸入。");
+                isPrompting = false;
+                return setCustomDiscount();
+            }
+
             if (num >= 10) num = num / 100;
             else if (num >= 1 && num < 10) num = num / 10;
             customDiscountRate = num;
             document.getElementById('optCustom').style.display = 'block';
-            alert(`已設定自訂折扣`);
         }
         isPrompting = false;
         renderCart(); 
