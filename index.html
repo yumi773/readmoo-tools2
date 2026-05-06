@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#f8f7f2">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Readmoo折扣計算機(多本) 2.3.6</title>
+    <title>Readmoo折扣計算機(多本) 2.4.1</title>
     <style>
         :root {
             /* 強制瀏覽器基礎元件遵循淺色模式 */
@@ -102,10 +102,33 @@
         }
         .display-area .label { color: var(--gold); font-size: 0.9rem; font-weight: bold;}
         
+        /* 簡單計算機圓鈕 */
+        .link-circle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background-color: #ffffff;
+        border: 1.5px solid var(--milktea);
+        color: var(--milktea);
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 0.9rem;
+        transition: 0.3s;
+        margin-left: 5px;
+        }
+
+        .link-circle:hover {
+            background-color: var(--gold);
+            color: #ffffff;
+        }
+
         /* 切換按鈕樣式 */
         .switch-links {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
         .link-btn {
             font-size: 0.75rem;
@@ -290,8 +313,9 @@
         <div class="display-header">
             <div class="label">書本售價</div>
             <div class="switch-links">
-                <a href="https://yumi773.github.io/readmoo-tools/Readmoo%20-tool/single.html" class="link-btn link-single">單本</a>
-                <a href="https://yumi773.github.io/readmoo-tools2/" class="link-btn link-multi">多本</a>
+                <a href="simple.html" class="link-circle" title="簡單計算機">±</a>
+                <a href="single.html" class="link-btn link-single">單本</a>
+                <a href="multi.html" class="link-btn link-multi">多本</a>
             </div>
         </div>
         <div>
@@ -318,7 +342,12 @@
 
         <button class="key" onclick="press('0')">0</button>
         <button class="key" onclick="press('00')">00</button>
-        <button class="key key-star" onclick="setCustomDiscount()">*</button>
+        <!-- key-star 長/短按出現不同效果 -->
+        <button class="key key-star" 
+                onmousedown="startStarTimer()" 
+                onmouseup="endStarTimer()" 
+                ontouchstart="startStarTimer()" 
+                ontouchend="endStarTimer()">*</button>
     </div>
 
     <div id="cartArea" class="summary-box" style="display: none;">
@@ -364,7 +393,7 @@
     </div>
 
     <div id="initInfo" class="init-view">
-        <div style="font-size: 0.9rem;">輸入金額後「加入清單」<br>點擊「*」可設定自訂折扣</div>
+        <div style="font-size: 0.9rem;">輸入金額後「加入清單」<br>「*」短按-自訂折扣，長按-乘法</div>
     </div>
 </div>
 
@@ -425,9 +454,41 @@
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
+    // --- 新增：長按偵測變數 ---
+    let starTimer;
+    let isLongPress = false;
+
+    function startStarTimer() {
+        isLongPress = false;
+        starTimer = setTimeout(() => {
+            isLongPress = true;
+            insertStar(); // 觸發長按：插入乘號
+        }, 500); // 設定 500 毫秒為長按閾值
+    }
+
+    function endStarTimer() {
+        clearTimeout(starTimer);
+        if (!isLongPress) {
+            setCustomDiscount(); // 觸發短按：自訂折扣
+        }
+    }
+
+    function insertStar() {
+        // 避免重複輸入乘號或在開頭輸入
+        if (currentInput !== "0" && !currentInput.includes('*')) {
+            currentInput += "*";
+            update();
+        }
+    }
+
+    // --- 修改：原本的 press 函數需支援數字輸入至算式末尾 ---
     function press(n) {
-        if (currentInput === "0") currentInput = n;
-        else if (currentInput.length < 6) currentInput += n;
+        if (currentInput === "0") {
+            currentInput = n;
+        } else {
+            // 限制長度，避免算式過長
+            if (currentInput.length < 10) currentInput += n;
+        }
         update();
     }
 
@@ -444,7 +505,11 @@
         update(); 
     }
 
-    function update() { document.getElementById('displayVal').innerText = currentInput; }
+    // --- 修改：顯示邏輯 ---
+    function update() { 
+        // 將程式碼內的 * 轉換為視覺上的 ×
+        document.getElementById('displayVal').innerText = currentInput.replace('*', '×'); 
+    }
 
     function setCustomDiscount() {
         isPrompting = true;
@@ -549,21 +614,34 @@
         });
     }
 
+    // --- 修改：加入清單邏輯 (支援倍數) ---
     function addToCart() {
-        const p = parseInt(currentInput);
-        if (p <= 0) return;
-        const sortedOptions = getSortedDiscounts(p);
-        
-        let targetId = sortedOptions[0].id;
-        if (currentGlobalType !== 'auto' && currentGlobalType !== 'mixed') {
-            const target = sortedOptions.find(opt => opt.id === currentGlobalType);
-            if (target && target.isPossible) targetId = currentGlobalType;
-            else currentGlobalType = 'mixed';
-        } else if (currentGlobalType === 'auto') {
-            targetId = sortedOptions[0].id;
+        let price, count = 1;
+
+        if (currentInput.includes('*')) {
+            const parts = currentInput.split('*');
+            price = parseInt(parts[0]);
+            count = parseInt(parts[1]) || 1; // 如果 * 後面沒數字，預設為 1
+        } else {
+            price = parseInt(currentInput);
         }
 
-        cart.push({ orig: p, selectedId: targetId });
+        if (isNaN(price) || price <= 0) return;
+
+        // 批次加入清單
+        for (let i = 0; i < count; i++) {
+            const sortedOptions = getSortedDiscounts(price);
+            let targetId = sortedOptions[0].id;
+            
+            if (currentGlobalType !== 'auto' && currentGlobalType !== 'mixed') {
+                const target = sortedOptions.find(opt => opt.id === currentGlobalType);
+                if (target && target.isPossible) targetId = currentGlobalType;
+                else currentGlobalType = 'mixed';
+            }
+
+            cart.push({ orig: price, selectedId: targetId });
+        }
+
         currentInput = "0";
         update();
         renderCart();
